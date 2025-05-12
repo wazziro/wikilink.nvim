@@ -26,8 +26,11 @@ M.setup = function(opts)
                         vim.cmd("edit " .. filepath)
                     end
                 else
-                    -- 通常のgfの動作を実行
-                    vim.cmd("normal! gf")
+                    -- カーソル位置のファイルパスを取得して開く
+                    local filepath = vim.fn.expand("<cfile>")
+                    if filepath ~= "" then
+                        vim.cmd("edit " .. filepath)
+                    end
                 end
             end, { buffer = true })
 
@@ -42,13 +45,17 @@ end
 -- カーソル位置のリンクを取得
 function M.get_link_under_cursor()
     local line = vim.api.nvim_get_current_line()
-    local col = vim.api.nvim_win_get_cursor(0)[2]
-    local pattern = "%[%[(.-)%]%]"
+    local col = vim.api.nvim_win_get_cursor(0)[2] + 1  -- 1-basedに変換
     
-    for link_start, link_end, link_text in line:gmatch("()%[%[(.-)%]%]()") do
-        if col >= link_start - 1 and col <= link_end then
+    local start_pos = 1
+    while true do
+        local link_start, link_end, link_text = line:find("%[%[(.-)%]%]", start_pos)
+        if not link_start then break end
+        
+        if col >= link_start and col <= link_end then
             return link_text
         end
+        start_pos = link_end + 1
     end
     return nil
 end
